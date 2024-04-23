@@ -153,8 +153,48 @@ class Crime:
         print(f"A pena após valoração da 2ª fase é de {self.sentence.to_str(start=False, end=False)} "
               f"({'+' if second_step_delta_days >= 0 else ''}{second_step_delta_days / DAYS_IN_MONTH:.1f} meses).")
 
+    def evaluate_third_step(self, *, majoring_list: list[float], minoring_list: list[float]):
+        """
+        Realiza a dosimetria da terceira fase.
+
+        :param majoring_list: Lista de majorantes.
+        :param minoring_list: Lista de minorantes.
+        """
+
+        if not self.__evaluated_steps_mask & 1:
+            print(f"O {self.name if self.name else 'crime'} ainda não foi avaliado na primeira fase.")
+            return
+
+        if not self.__evaluated_steps_mask & 1 << 1:
+            print(f"O {self.name if self.name else 'crime'} ainda não foi avaliado na segunda fase.")
+            return
+
+        if self.__evaluated_steps_mask & 1 << 2:
+            print(f"{self.name.capitalize() if self.name else 'Crime'} já avaliado na terceira fase.")
+            return
+
+        self.__evaluated_steps_mask |= 1 << 2
+
+        print("\nMajorantes:")
+        for i, major in enumerate(majoring_list):
+            majoring_days = int(self.sentence.raw_days * major)
+            self.sentence.adjust(majoring_days)
+            print(f"\tO {i + 1}º majorante foi aplicado e levou a pena a {self.sentence.to_str(start=False, end=False)}"
+                  f" (+{majoring_days / DAYS_IN_MONTH:.1f} meses).")
+
+        print("Minorantes:")
+        for i, minor in enumerate(minoring_list):
+            minoring_days = -int(self.sentence.raw_days * minor)
+            self.sentence.adjust(minoring_days)
+            print(f"\tO {i + 1}º minorante foi aplicado e levou a pena a {self.sentence.to_str(start=False, end=False)}"
+                  f" ({minoring_days / DAYS_IN_MONTH:.1f} meses).")
+
+        print(f"\nA pena após valoração da 3ª fase é de {self.sentence.to_str(start=False)}")
+
 
 if __name__ == "__main__":
+    # Aplicação de exemplo
     test_crime = Crime(min_sentence="6a", max_sentence="20a")
     test_crime.evaluate_first_step(5)
     test_crime.evaluate_second_step(aggravating_count=2, mitigating_count=1)
+    test_crime.evaluate_third_step(majoring_list=[2 / 3, 1 / 2], minoring_list=[1 / 4, 1 / 6, 1 / 2])
