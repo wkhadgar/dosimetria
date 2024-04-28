@@ -78,6 +78,25 @@ class Sentence:
 
         return ret_str + ("." if end else "")
 
+    @staticmethod
+    def qualified_str_to_days(string: str) -> int:
+        """
+        Transforma uma string do tipo "1a", "2m" ou "3d" em dias.
+
+        :param string: String de tempo formatada, com sufixo 'a', 'm' ou 'd'.
+        :return: Tempo em dias.
+        """
+
+        days = float(string[:-1])
+
+        qualifier = string[-1]
+        if qualifier == "m":
+            days *= DAYS_IN_MONTH
+        if qualifier == "a":
+            days *= DAYS_IN_YEAR
+
+        return int(days)
+
 
 class Crime:
     """
@@ -125,7 +144,7 @@ class Crime:
         first_step_delta_days = int(criteria_weight_days * max(min(8, first_step_valid_criteria), 0))
 
         self.sentence.adjust(first_step_delta_days)
-        print(f"A pena após valoração da 1ª fase é de {self.sentence.to_str(start=False, end=False)} "
+        print(f"\nA pena após valoração da 1ª fase é de {self.sentence.to_str(start=False, end=False)} "
               f"(+{first_step_delta_days / DAYS_IN_MONTH:.1f} meses).")
 
     def evaluate_second_step(self, *, aggravating_count: int, mitigating_count: int):
@@ -150,7 +169,7 @@ class Crime:
         second_step_delta_days = int(criteria_weight_days * (aggravating_count - mitigating_count))
 
         self.sentence.adjust(second_step_delta_days)
-        print(f"A pena após valoração da 2ª fase é de {self.sentence.to_str(start=False, end=False)} "
+        print(f"\nA pena após valoração da 2ª fase é de {self.sentence.to_str(start=False, end=False)} "
               f"({'+' if second_step_delta_days >= 0 else ''}{second_step_delta_days / DAYS_IN_MONTH:.1f} meses).")
 
     def evaluate_third_step(self, *, majoring_list: list[float], minoring_list: list[float]):
@@ -177,14 +196,22 @@ class Crime:
 
         print("\nMajorantes:")
         for i, major in enumerate(majoring_list):
-            majoring_days = int(self.sentence.raw_days * major)
+            if isinstance(major, str):
+                majoring_days = Sentence.qualified_str_to_days(major)
+            else:
+                majoring_days = int(self.sentence.raw_days * major)
+
             self.sentence.adjust(majoring_days)
             print(f"\tO {i + 1}º majorante foi aplicado e levou a pena a {self.sentence.to_str(start=False, end=False)}"
                   f" (+{majoring_days / DAYS_IN_MONTH:.1f} meses).")
 
         print("Minorantes:")
         for i, minor in enumerate(minoring_list):
-            minoring_days = -int(self.sentence.raw_days * minor)
+            if isinstance(minor, str):
+                minoring_days = -Sentence.qualified_str_to_days(minor)
+            else:
+                minoring_days = -int(self.sentence.raw_days * minor)
+
             self.sentence.adjust(minoring_days)
             print(f"\tO {i + 1}º minorante foi aplicado e levou a pena a {self.sentence.to_str(start=False, end=False)}"
                   f" ({minoring_days / DAYS_IN_MONTH:.1f} meses).")
@@ -197,4 +224,4 @@ if __name__ == "__main__":
     test_crime = Crime(min_sentence="6a", max_sentence="20a")
     test_crime.evaluate_first_step(5)
     test_crime.evaluate_second_step(aggravating_count=2, mitigating_count=1)
-    test_crime.evaluate_third_step(majoring_list=[2 / 3, 1 / 2], minoring_list=[1 / 4, 1 / 6, 1 / 2])
+    test_crime.evaluate_third_step(majoring_list=[2 / 3, 1 / 2, "2a"], minoring_list=[1 / 4, 1 / 6, 1 / 2, "2m"])
