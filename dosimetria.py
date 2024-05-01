@@ -8,6 +8,13 @@ WEIGHT_FIRST_STEP = 1 / 8  # Fração de cada critério da primeira fase.
 
 WEIGHT_SECOND_STEP = 1 / 6  # Fração de cada critério da segunda fase.
 
+FINE_MIN_DAYS = 10 # Pena mínima de multa, em dias-multa.
+
+FINE_MAX_DAYS = 360 # Pena máxima de multa, em dias-multa.
+
+# Incremento de cada critério a ser valorado na primeira fase da multa, em dias-multa.
+FINE_INC_DAYS = (FINE_MAX_DAYS - FINE_MIN_DAYS) * WEIGHT_FIRST_STEP
+
 DAYS_IN_MONTH = 30  # Dias em um mês.
 
 MONTHS_IN_YEAR = 12  # Meses em um ano.
@@ -114,6 +121,7 @@ class Crime:
 
         min_amount = int(min_sentence[:-1])
         max_amount = int(max_sentence[:-1])
+        self.__fine_days = FINE_MIN_DAYS
 
         self.name = name.strip().lower() if name is not None else None
         self.__evaluated_steps_mask: int = 0
@@ -144,8 +152,9 @@ class Crime:
         first_step_delta_days = int(criteria_weight_days * max(min(8, first_step_valid_criteria), 0))
 
         self.sentence.adjust(first_step_delta_days)
+        self.__fine_days += int(FINE_INC_DAYS * first_step_valid_criteria)
         print(f"\nA pena após valoração da 1ª fase é de {self.sentence.to_str(start=False, end=False)} "
-              f"(+{first_step_delta_days / DAYS_IN_MONTH:.1f} meses).")
+              f"(+{first_step_delta_days / DAYS_IN_MONTH:.1f} meses).\nSe aplicável, a pena-multa é de {self.__fine_days} dias.")
 
     def evaluate_second_step(self, *, aggravating_count: int, mitigating_count: int):
         """
