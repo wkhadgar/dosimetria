@@ -8,9 +8,9 @@ WEIGHT_FIRST_STEP = 1 / 8  # Fração de cada critério da primeira fase.
 
 WEIGHT_SECOND_STEP = 1 / 6  # Fração de cada critério da segunda fase.
 
-FINE_MIN_DAYS = 10 # Pena mínima de multa, em dias-multa.
+FINE_MIN_DAYS = 10  # Pena mínima de multa, em dias-multa.
 
-FINE_MAX_DAYS = 360 # Pena máxima de multa, em dias-multa.
+FINE_MAX_DAYS = 360  # Pena máxima de multa, em dias-multa.
 
 # Incremento de cada critério a ser valorado na primeira fase da multa, em dias-multa.
 FINE_INC_DAYS = (FINE_MAX_DAYS - FINE_MIN_DAYS) * WEIGHT_FIRST_STEP
@@ -44,23 +44,26 @@ class Sentence:
         self.months = self.raw_months % MONTHS_IN_YEAR
         self.years = self.raw_months // MONTHS_IN_YEAR
 
-    def adjust(self, days: int):
+    def adjust(self, days: int | str):
         """
         Ajusta a sentença conforme a quantidade dada de dias.
 
-        :param days: Dias para ajustar a sentença.
+        :param days: Dias/Tempo para ajustar a sentença.
         :return: Sentença atualizada.
         """
 
-        self.raw_days += days
+        if isinstance(days, str):
+            self.raw_days = Sentence.qualified_complex_str_to_days(days)
+        else:
+            self.raw_days += days
+
         self.__update()
         return self
 
-    def to_str(self, *, raw_days: bool = False, start: bool = True, end: bool = True):
+    def to_str(self, *, start: bool = True, end: bool = True):
         """
         Converte uma sentença para uma string formatada.
 
-        :param raw_days: Mostrar apenas os dias absolutos.
         :param start: Formatar como início de frase.
         :param end: Formatar como fim de frase.
         :return: String formatada.
@@ -71,7 +74,7 @@ class Sentence:
         if start:
             ret_str += "A pena é de "
 
-        if raw_days or self.raw_days == 0:
+        if self.raw_days == 0:
             ret_str += f"{self.raw_days} dias"
         else:
             if self.years:
@@ -83,7 +86,7 @@ class Sentence:
             if self.days:
                 ret_str += (" e " if (self.years or self.months) else "") + f"{self.days} dias"
 
-        return ret_str + ("." if end else "")
+        return ret_str + f" [{self.raw_days} dias]" + ("." if end else "")
 
     @staticmethod
     def qualified_str_to_days(string: str) -> int:
@@ -103,6 +106,22 @@ class Sentence:
             days *= DAYS_IN_YEAR
 
         return int(days)
+
+    @staticmethod
+    def qualified_complex_str_to_days(string: str) -> int:
+        """
+        Transforma uma string do tipo "1a", "2m" ou "3d" em dias.
+
+        :param string: String de tempo formatada, com sufixo 'a', 'm' ou 'd'.
+        :return: Tempo em dias.
+        """
+
+        days = 0
+        tok = string.split(",")
+        for s in tok:
+            days += Sentence.qualified_str_to_days(s)
+
+        return days
 
 
 class Crime:
